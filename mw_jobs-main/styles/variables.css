@@ -1,0 +1,70 @@
+/* CSS Variables for Design System */
+:root {
+  /* Colors */
+  --color-primary: #007AFF;
+  --color-primary-hover: #0056CC;
+  --color-whatsapp: #25D366;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-gray-light: #7F8496;
+  --color-gray-medium: #9CA3AF;
+  --color-error: #EF4444;
+  --color-success: #10B981;
+  
+  /* Background Colors */
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --bg-glass-strong: rgba(255, 255, 255, 0.95);
+  --bg-transparent: transparent;
+  
+  /* Typography */
+  --font-family: 'Inter', 'Polin', system-ui, Arial, sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  
+  /* Font Sizes */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  --font-size-3xl: 32px;
+  
+  /* Spacing */
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 20px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --space-4xl: 48px;
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 50px;
+  --radius-2xl: 80px;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.1);
+  
+  /* Special Effects */
+  --backdrop-blur: blur(14.5px);
+  --transition-fast: all 0.2s ease;
+  --transition-normal: all 0.3s ease;
+  --transition-slow: all 0.5s ease;
+  
+  /* Layout */
+  --container-max-width: 1200px;
+  --header-height: 84px;
+  --mobile-breakpoint: 768px;
+  --tablet-breakpoint: 1024px;
+}
