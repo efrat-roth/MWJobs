@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { addEventSchema } from '../../../lib/events/validation';
-import { createCalendarEventsForDateRange } from '../../../lib/google/calendar';
 import { createEventMeta, loadAllEvents, saveAllEvents } from '../../../lib/events/repository';
 import { overwriteAll } from '../../../lib/google/sheets';
 import { createApiHandler, validateSchema } from '../../../lib/utils/api';
@@ -9,6 +8,8 @@ import { createEventSheetName } from '../../../lib/utils/common';
 import { Logger } from '../../../lib/util/logger';
 import { type AddEventRequest, type ApiResponse } from '../../../lib/types';
 import { createSpreadsheetInFolder, shareFileWithClient } from '../../../lib/google/drive';
+import { getAuthorizedApis } from '../../../lib/google/backendClient';
+import { createCalendarEventsForDateRange } from '../../../lib/google/calendar';
 export default createApiHandler(async (req, res) => {
   const validation = validateSchema<AddEventRequest>(addEventSchema, 'Invalid event data');
   const parsed = validation(req);
@@ -20,6 +21,27 @@ export default createApiHandler(async (req, res) => {
     startDate: parsed.startDate,
     endDate: parsed.endDate
   });
+
+  if ((parsed as any).clientName && parsed.clientEmail) {
+    try {
+      const { sheets } = await getAuthorizedApis();
+      const clientsSheetId = process.env.CLIENTS_SHEET_ID;
+
+      if (clientsSheetId) {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: clientsSheetId,
+          range: 'Clients!A:B',
+          valueInputOption: 'USER_ENTERED',
+          requestBody: {
+            values: [[(parsed as any).clientName, parsed.clientEmail]],
+          },
+        });
+        Logger.info('Successfully added new client to database', { clientName: (parsed as any).clientName });
+      }
+    } catch (sheetError: any) {
+      Logger.error(new Error(`Failed to save new client to sheet: ${sheetError.message}`));
+    }
+  }  
 
   const startIso = `${parsed.startDate}T${parsed.startTime}:00`;
   const endIso = `${parsed.endDate}T${parsed.endTime}:00`;
