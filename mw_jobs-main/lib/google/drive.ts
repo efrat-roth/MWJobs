@@ -1,5 +1,6 @@
 import { getAuthorizedApis } from './backendClient';
 import { Logger, AppError } from '../util/logger';
+import { google } from 'googleapis';
 
 export async function createSpreadsheetInFolder(name: string, folderId: string): Promise<string> {
   try {
@@ -26,6 +27,36 @@ export async function createSpreadsheetInFolder(name: string, folderId: string):
         function: 'createSpreadsheetInFolder',
         file: 'lib/google/drive.ts',
         additionalData: { name, folderId, originalError: error.message }
+      }
+    );
+    Logger.error(appError);
+    throw appError;
+  }
+}
+
+export async function shareFileWithClient(fileId: string, email: string) {
+  try {
+    Logger.debug('Sharing file with client', { fileId, email });
+    
+    const { drive } = await getAuthorizedApis();
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'writer', // הרשאת עריכה ללקוח
+        type: 'user',
+        emailAddress: email,
+      },
+    });
+    
+    Logger.debug('Successfully shared file', { fileId, email });
+  } catch (error: any) {
+    const appError = new AppError(
+      `Failed to share file "${fileId}" with "${email}": ${error.message}`,
+      'DRIVE_FILE_SHARE_FAILED',
+      {
+        function: 'shareFileWithClient',
+        file: 'lib/google/drive.ts',
+        additionalData: { fileId, email, originalError: error.message }
       }
     );
     Logger.error(appError);
@@ -61,3 +92,6 @@ export async function deleteFile(fileId: string) {
     throw appError;
   }
 }
+
+
+
