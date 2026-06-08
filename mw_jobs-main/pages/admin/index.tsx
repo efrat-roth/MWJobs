@@ -41,6 +41,11 @@
     const [endTimeManuallySet, setEndTimeManuallySet] = useState(false);
     const [editingEvent, setEditingEvent] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<EditEvent | null>(null);
+    const [clients, setClients] = useState<{name: string, email: string}[]>([]);
+    const [selectedClientMode, setSelectedClientMode] = useState<'none' | 'existing' | 'new'>('none');
+    const [existingClientEmail, setExistingClientEmail] = useState('');
+    const [newClientName, setNewClientName] = useState('');
+    const [newClientEmail, setNewClientEmail] = useState('');
 
     async function fetchEvents(){
       try {
@@ -51,8 +56,20 @@
       }
     }
 
+    async function fetchClients() {
+      try {
+        const res = await axios.get('/api/clients/get');
+        setClients(res.data.clients || []);
+      } catch(e) {
+        console.error('Error fetching clients', e);
+      }
+    }
+
     useEffect(()=>{
-      if(session?.isAdmin) fetchEvents();
+      if(session?.isAdmin) {
+        fetchEvents();
+        fetchClients();
+      }
     },[session]);
 
     function update(k:string,v:any){ setForm(f=>({...f,[k]:v})); }
@@ -139,21 +156,33 @@
         description:''
       });
       setEndTimeManuallySet(false);
+      setSelectedClientMode('none');
+      setExistingClientEmail('');
+      setNewClientName('');
+      setNewClientEmail('');
     }
-
+ 
     async function createEvent(e:any){
       e.preventDefault();
       setLoading(true); setError(''); setMessage('');
+      
+      // הגדרת המייל והשם שישלחו לשרת
+      const clientEmailToSend = selectedClientMode === 'new' ? newClientEmail : (selectedClientMode === 'existing' ? existingClientEmail : undefined);
+      const clientNameToSend = selectedClientMode === 'new' ? newClientName : undefined;
+
       try {
         await axios.post('/api/events/add', {
           name: form.name,
           startDate: form.startDate,
-          endDate: form.endDate || form.startDate, // Use startDate if endDate is empty
+          endDate: form.endDate || form.startDate,
           startTime: form.startTime,
-          endTime: form.endTime || form.startTime, // Use startTime if endTime is empty
+          endTime: form.endTime || form.startTime,
           workerLimit: Number(form.workerLimit),
           hourlyRate: Number(form.hourlyRate),
-          description: form.description
+          description: form.description,
+          // השדות החדשים שהוספנו:
+          clientEmail: clientEmailToSend,
+          clientName: clientNameToSend
         });
         setMessage('אירוע נוצר בהצלחה');
         resetForm();
@@ -328,6 +357,56 @@
           <div className="admin-card">
             <h2 className="admin-card-title">יצירת אירוע חדש</h2>
             <form onSubmit={createEvent} className="admin-form">
+              <div className="admin-field-group" style={{ backgroundColor: '#eef2f6', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+                <label className="admin-field-label">בחר לקוח (לשיתוף הגיליון)</label>
+                <select 
+                  className="admin-field-input"
+                  value={selectedClientMode === 'new' ? 'new' : existingClientEmail}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'new') {
+                      setSelectedClientMode('new');
+                      setExistingClientEmail('');
+                    } else if (val !== '') {
+                      setSelectedClientMode('existing');
+                      setExistingClientEmail(val);
+                    } else {
+                      setSelectedClientMode('none');
+                      setExistingClientEmail('');
+                    }
+                  }}
+                >
+                  <option value="">-- ללא שיתוף לקוח --</option>
+                  {clients.map((c, i) => (
+                    <option key={i} value={c.email}>{c.name} ({c.email})</option>
+                  ))}
+                  <option value="new" style={{ fontWeight: 'bold' }}>+ הוסף לקוח חדש...</option>
+                </select>
+              </div>
+
+              {selectedClientMode === 'new' && (
+                <div className="admin-form-row" style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '15px' }}>
+                  <div className="admin-field-group">
+                    <label className="admin-field-label">שם הלקוח החדש</label>
+                    <input 
+                      value={newClientName}
+                      onChange={e => setNewClientName(e.target.value)}
+                      placeholder="שם חברה / לקוח"
+                      className="admin-field-input"
+                    />
+                  </div>
+                  <div className="admin-field-group">
+                    <label className="admin-field-label">מייל הלקוח החדש</label>
+                    <input 
+                      type="email"
+                      value={newClientEmail}
+                      onChange={e => setNewClientEmail(e.target.value)}
+                      placeholder="client@example.com"
+                      className="admin-field-input"
+                    />
+                  </div>
+                </div>
+              )}  
               <div className="admin-field-group">
                 <label className="admin-field-label">שם האירוע</label>
                 <input 
