@@ -99,6 +99,7 @@ export interface AddEventRequest {
   workerLimit: number;
   hourlyRate: number;
   description?: string;
+  clientEmail?: string;
 }
 
 export interface DeleteEventRequest {

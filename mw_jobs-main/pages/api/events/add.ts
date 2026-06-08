@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { addEventSchema } from '../../../lib/events/validation';
-import { createSpreadsheetInFolder } from '../../../lib/google/drive';
 import { createCalendarEventsForDateRange } from '../../../lib/google/calendar';
 import { createEventMeta, loadAllEvents, saveAllEvents } from '../../../lib/events/repository';
 import { overwriteAll } from '../../../lib/google/sheets';
@@ -9,7 +8,7 @@ import { env } from '../../../lib/config/environment';
 import { createEventSheetName } from '../../../lib/utils/common';
 import { Logger } from '../../../lib/util/logger';
 import { type AddEventRequest, type ApiResponse } from '../../../lib/types';
-
+import { createSpreadsheetInFolder, shareFileWithClient } from '../../../lib/google/drive';
 export default createApiHandler(async (req, res) => {
   const validation = validateSchema<AddEventRequest>(addEventSchema, 'Invalid event data');
   const parsed = validation(req);
@@ -28,6 +27,9 @@ export default createApiHandler(async (req, res) => {
   // Create event sheet with date range in name
   const sheetName = createEventSheetName(parsed.name, parsed.startDate, parsed.endDate);
   const sheetFileId = await createSpreadsheetInFolder(sheetName, sheetConfig.eventsFolderId);
+  if (parsed.clientEmail) {
+    await shareFileWithClient(sheetFileId, parsed.clientEmail);
+  }
   await overwriteAll(sheetFileId, ['full_name','phone','id','city','date_of_birth','signed_at'], []);
 
   // Create separate calendar events for each day in the date range

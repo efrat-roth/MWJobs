@@ -8,7 +8,8 @@ export const addEventSchema = z.object({
   endTime: z.string().regex(/^\d{2}:\d{2}$/, "שעת סיום חייבת להיות בפורמט HH:MM"),
   workerLimit: z.number().int().positive().max(500, "מספר עובדים מקסימלי לא יכול להיות יותר מ-500"),
   description: z.string().optional(),
-  hourlyRate: z.number().min(0, "מחיר לא יכול להיות שלילי")
+  hourlyRate: z.number().min(0, "מחיר לא יכול להיות שלילי"),
+  clientEmail: z.string().email('Invalid email address').optional()
 }).refine(data => {
   // Ensure end date is not before start date
   const startDate = new Date(data.startDate);
