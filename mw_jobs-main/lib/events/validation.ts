@@ -9,7 +9,7 @@ export const addEventSchema = z.object({
   workerLimit: z.number().int().positive().max(500, "מספר עובדים מקסימלי לא יכול להיות יותר מ-500"),
   description: z.string().optional(),
   hourlyRate: z.number().min(0, "מחיר לא יכול להיות שלילי"),
-  clientEmail: z.string().email('Invalid email address').optional()
+  clientEmail: z.union([z.string().email('Invalid email address'), z.literal('')]).optional()
 }).refine(data => {
   // Ensure end date is not before start date
   const startDate = new Date(data.startDate);
