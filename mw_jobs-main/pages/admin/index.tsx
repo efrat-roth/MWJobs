@@ -4,6 +4,10 @@
   import { formatDateRangeDisplay, formatTimeRangeDisplay } from '../../lib/utils/common';
   import { EventStatus } from '../../lib/types';
 
+
+  const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+  const MINUTES = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, '0'));
+
   interface AdminEvent {
     id:string; name:string; startDate:string; endDate:string; 
     startTime:string; endTime:string; status:string;
@@ -118,29 +122,36 @@
     }
 
     // Handle start time change with automatic end time calculation
+    // חיווט מעודכן לשעת התחלה - מותאם לתפריטי הבחירה
     function handleStartTimeChange(newStartTime: string) {
-      const roundedStartTime = roundToFiveMinutes(newStartTime);
-      
-      // Always update the end time if it hasn't been manually set by the user
-      if (roundedStartTime && !endTimeManuallySet) {
-        const autoEndTime = addSixHours(roundedStartTime);
+      // אם אחד החלקים לא נבחר עדיין (למשל רק שעה בלי דקה), לא נשמור ערך שבור
+      if (newStartTime.startsWith(':') || newStartTime.endsWith(':')) {
+        setForm(f => ({ ...f, startTime: '' }));
+        return;
+      }
+
+      // תפריט הבחירה כבר מביא זמן עגול, אין באמת צורך ב-roundToFiveMinutes
+      if (newStartTime && !endTimeManuallySet) {
+        const autoEndTime = addSixHours(newStartTime);
         setForm(f => ({
           ...f,
-          startTime: roundedStartTime,
+          startTime: newStartTime,
           endTime: autoEndTime
         }));
       } else {
-        // Just update start time without affecting end time
-        setForm(f => ({ ...f, startTime: roundedStartTime }));
+        setForm(f => ({ ...f, startTime: newStartTime }));
       }
     }
 
-    // Handle end time change
+    // חיווט מעודכן לשעת סיום
     function handleEndTimeChange(newEndTime: string) {
-      const roundedEndTime = roundToFiveMinutes(newEndTime);
-      // Mark that user has manually set the end time
+      if (newEndTime.startsWith(':') || newEndTime.endsWith(':')) {
+        setForm(f => ({ ...f, endTime: '' }));
+        return;
+      }
+      
       setEndTimeManuallySet(true);
-      setForm(f => ({ ...f, endTime: roundedEndTime }));
+      setForm(f => ({ ...f, endTime: newEndTime }));
     }
 
     // Reset the manual flag when form is cleared
@@ -255,6 +266,8 @@
       }
     }
 
+    
+
     async function toggleFreeze(eventId: string, currentFrozen: boolean) {
       try {
         let newStatus: string;
@@ -298,7 +311,9 @@
       const eventEnd = new Date(event.endDate);
       return eventEnd > now && event.status !== 'frozen';
     }
-
+    // פירוק הזמנים הנוכחיים מה-state לצורך הצגה מדויקת בתפריטים
+    const [startTimeH, startTimeM] = form.startTime ? form.startTime.split(':') : ['', ''];
+    const [endTimeH, endTimeM] = form.endTime ? form.endTime.split(':') : ['', ''];
     if(status === 'loading') {
       return (
         <div className="admin-login-container">
@@ -441,26 +456,62 @@
               </div>
               
               <div className="admin-form-row">
+                {/* שעת התחלה */}
                 <div className="admin-field-group">
                   <label className="admin-field-label">שעת התחלה</label>
-                  <input 
-                    required 
-                    type="time" 
-                    step="300"
-                    value={form.startTime} 
-                    onChange={e=>handleStartTimeChange(e.target.value)}
-                    className="admin-field-input"
-                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* ריבוע הדקה - עכשיו ראשון */}
+                    <select
+                      required
+                      value={startTimeM}
+                      onChange={e => handleStartTimeChange(`${startTimeH || '00'}:${e.target.value}`)}
+                      className="admin-field-input"
+                      style={{ width: '50%' }}
+                    >
+                      <option value="">דקה</option>
+                      {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+
+                    {/* ריבוע השעה */}
+                    <select
+                      required
+                      value={startTimeH}
+                      onChange={e => handleStartTimeChange(`${e.target.value}:${startTimeM || '00'}`)}
+                      className="admin-field-input"
+                      style={{ width: '50%' }}
+                    >
+                      <option value="">שעה</option>
+                      {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
                 </div>
+
+                {/* שעת סיום */}
                 <div className="admin-field-group">
                   <label className="admin-field-label">שעת סיום (אופציונלי)</label>
-                  <input 
-                    type="time" 
-                    step="300"
-                    value={form.endTime} 
-                    onChange={e=>handleEndTimeChange(e.target.value)}
-                    className="admin-field-input"
-                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {/* ריבוע הדקה - עכשיו ראשון */}
+                    <select
+                      value={endTimeM}
+                      onChange={e => handleEndTimeChange(`${endTimeH || '00'}:${e.target.value}`)}
+                      className="admin-field-input"
+                      style={{ width: '50%' }}
+                    >
+                      <option value="">דקה</option>
+                      {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+
+                    {/* ריבוע השעה */}
+                    <select
+                      value={endTimeH}
+                      onChange={e => handleEndTimeChange(`${e.target.value}:${endTimeM || '00'}`)}
+                      className="admin-field-input"
+                      style={{ width: '50%' }}
+                    >
+                      <option value="">שעה</option>
+                      {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
 
