@@ -74,6 +74,7 @@ export default createApiHandler(async (req, res) => {
   });
 
   // Save metadata
+ // Save metadata
   const events = await loadAllEvents();
   const meta = createEventMeta({
     name: parsed.name,
@@ -84,7 +85,8 @@ export default createApiHandler(async (req, res) => {
     worker_limit: parsed.workerLimit,
     hourlyRate: parsed.hourlyRate,
     sheet_file_id: sheetFileId,
-    calendar_event_ids: calendarEventIds
+    calendar_event_ids: calendarEventIds,
+    min_age: (parsed as any).minAge // <--- עכשיו אפשר להעביר את זה ישירות ורגיל!
   });
   
   events.push(meta);

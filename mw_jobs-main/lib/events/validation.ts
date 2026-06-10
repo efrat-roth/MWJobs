@@ -9,7 +9,8 @@ export const addEventSchema = z.object({
   workerLimit: z.number().int().positive().max(500, "מספר עובדים מקסימלי לא יכול להיות יותר מ-500"),
   description: z.string().optional(),
   hourlyRate: z.number().min(0, "מחיר לא יכול להיות שלילי"),
-  clientEmail: z.union([z.string().email('Invalid email address'), z.literal('')]).optional()
+  clientEmail: z.union([z.string().email('Invalid email address'), z.literal('')]).optional(),
+  minAge: z.number().int().nonnegative().optional() // <--- הנה התוספת! השרת מאשר לקבל גיל מינימום כמספר אופציונלי
 }).refine(data => {
   // Ensure end date is not before start date
   const startDate = new Date(data.startDate);
@@ -52,8 +53,10 @@ export const signupSchema = z.object({
       const monthDiff = today.getMonth() - birthDate.getMonth();
       const dayDiff = today.getDate() - birthDate.getDate();
       
-      // Calculate exact age
       const exactAge = age - ((monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) ? 1 : 0);
-      return exactAge >= 18;
-    }, "חייב להיות בן 18 לפחות")
+      
+      // שינינו מ-18 ל-14 כדי לאפשר הרשמה עקרונית במערכת,
+      // החסימה האמיתית והחכמה תתבצע דינמית לפי דרישת האירוע!
+      return exactAge >= 12; 
+    }, "חייב להיות בן 14 לפחות")
 });

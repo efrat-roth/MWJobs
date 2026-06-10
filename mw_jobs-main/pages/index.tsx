@@ -17,6 +17,7 @@ interface EventItem {
   isFull: boolean;
   label: string;
   displayText: string;
+  min_age?: number;
 }
 
 interface FormHistory {
@@ -237,9 +238,9 @@ export default function Landing() {
     
     setLoading(true);
     try {
-      await axios.post('/api/signup',{ eventIds: selectedEvents, ...form });
+      const response = await axios.post('/api/signup',{ eventIds: selectedEvents, ...form });
       
-      // Save form data to history on successful submission - batch update
+      // שמירת היסטוריית טופס
       addToHistoryBatch([
         { field: 'fullName', value: form.fullName.trim() },
         { field: 'idNumber', value: form.idNumber.trim() },
@@ -247,16 +248,21 @@ export default function Landing() {
         { field: 'city', value: form.city.trim() }
       ]);
       
+      // שומרים את הודעת ההצלחה מהשרת כדי להציג אותה על המסך!
+      setMessage(response.data.message);
       setIsSuccess(true);
+      
       setForm({ fullName:'', idNumber:'', phone:'', city:'', dateOfBirth:''});
       setSelectedEvents([]);
       setSuggestions({ field: null, suggestions: [], show: false });
       await fetchEvents();
       
-      // Reset success state after 3 seconds
+      // נשאיר את ההודעה ל-6 שניות כדי שיספיקו לקרוא, ואז ננקה
       setTimeout(() => {
         setIsSuccess(false);
-      }, 3000);
+        setMessage('');
+      }, 6000);
+
     } catch(err:any){
       const errorData = err.response?.data;
       
@@ -309,8 +315,8 @@ export default function Landing() {
           setMessage('יש לתקן את השגיאות בטופס');
         }
       } else {
-        // Fallback to generic error message
-        setMessage(errorData?.error || 'שגיאה בשליחת הטופס');
+        // מציג קודם כל את ההודעה המפורטת (message) ורק אם היא לא קיימת עובר ל-error הכללי
+        setMessage(errorData?.message || errorData?.error || 'שגיאה בשליחת הטופס');
       }
     } finally {
       setLoading(false);
@@ -379,6 +385,7 @@ export default function Landing() {
                             <div className="event-display-container">
                               <div className="event-name">
                                 {event.name}
+                                {event.min_age ? <span style={{color: '#e74c3c', fontSize: '0.85em', marginRight: '6px', fontWeight: 'bold'}}>(מגיל {event.min_age}+)</span> : null}
                                 {event.status === 'frozen' ? 
                                   <span className="event-unavailable-indicator"> (לא זמין)</span> :
                                   event.isFull && <span className="event-full-indicator"> (מלא)</span>
@@ -562,6 +569,22 @@ export default function Landing() {
                 {loading ? 'שולח...' : isSuccess ? 'נרשמת בהצלחה' : 'שליחה'}
                 <img src="/submit-icon.svg" alt="Send" className="submit-icon" />
               </button>
+             {message && (
+                <div style={{ 
+                  color: isSuccess ? '#155724' : '#721c24', 
+                  backgroundColor: isSuccess ? '#d4edda' : '#f8d7da',
+                  border: `1px solid ${isSuccess ? '#c3e6cb' : '#f5c6cb'}`,
+                  padding: '12px',
+                  borderRadius: '6px',
+                  marginTop: '15px', 
+                  textAlign: 'center', 
+                  fontWeight: 'bold',
+                  fontSize: '1em',
+                  whiteSpace: 'pre-line' // שומר על ירידת שורות אם יש כמה שגיאות
+                }}>
+                  {message}
+                </div>
+              )}
             </div>
           </form>
         </div>

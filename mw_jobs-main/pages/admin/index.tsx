@@ -13,6 +13,7 @@
     startTime:string; endTime:string; status:string;
     worker_limit:number; hourlyRate: number; signups_count:number;
     displayText: string;
+    min_age?: number;
   }
 
   interface EditEvent {
@@ -37,6 +38,7 @@
       endTime:'', 
       workerLimit:50,
       hourlyRate: 40, 
+      minAge: '16', 
       description:''
     });
     const [loading,setLoading]= useState(false);
@@ -164,6 +166,7 @@
         endTime:'', 
         workerLimit:50, 
         hourlyRate: 40,
+        minAge: '16', 
         description:''
       });
       setEndTimeManuallySet(false);
@@ -193,7 +196,8 @@
           description: form.description,
           // השדות החדשים שהוספנו:
           clientEmail: clientEmailToSend,
-          clientName: clientNameToSend
+          clientName: clientNameToSend,
+          minAge: form.minAge ? Number(form.minAge) : undefined // המרה למספר או null אם לא הוגדר
         });
         setMessage('אירוע נוצר בהצלחה');
         resetForm();
@@ -539,6 +543,18 @@
               </div>
 
               <div className="admin-field-group">
+                <label className="admin-field-label">גיל מינימלי להרשמה (אופציונלי)</label>
+                <input 
+                  type="number"
+                  value={form.minAge} 
+                  onChange={e=>update('minAge', e.target.value)}
+                  placeholder="למשל: 18"
+                  className="admin-field-input"
+                  min="0"
+                />
+              </div>
+
+              <div className="admin-field-group">
                 <label className="admin-field-label">תיאור (אופציונלי)</label>
                 <input 
                   value={form.description} 
@@ -569,6 +585,7 @@
                     <th>הרשמות</th>
                     <th>תקופה</th>
                     <th>מחיר לשעה</th>
+                    <th>גיל מינימום</th> {/* <--- התוספת */}
                     <th>שם האירוע</th>
                   </tr>
                 </thead>
@@ -699,12 +716,13 @@
                         )}
                       </td>
                       <td>{e.hourlyRate} ש"ח </td>
+                      <td>{e.min_age ? `מגיל ${e.min_age}+` : 'ללא הגבלה'}</td> {/* <--- הנה התא החדש! */}
                       <td>{e.name}</td>
                     </tr>
                   ))}
                   {events.length === 0 && (
                     <tr>
-                      <td colSpan={6} style={{textAlign: 'center', padding: '32px', color: '#9CA3AF'}}>
+                      <td colSpan={7} style={{textAlign: 'center', padding: '32px', color: '#9CA3AF'}}>
                         אין אירועים להצגה
                       </td>
                     </tr>

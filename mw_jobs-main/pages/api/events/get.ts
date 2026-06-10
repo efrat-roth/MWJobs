@@ -63,6 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // For public: show open, full, and frozen events (but not archived/deleted)
+    // For public: show open, full, and frozen events (but not archived/deleted)
     const publicEvents = future
       .filter(e=> e.status === 'open' || e.status === 'full' || e.status === 'frozen')
       .map(e=>({
@@ -78,7 +79,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         isFull: e.signups_count >= e.worker_limit || e.status === 'frozen',
         label: e.label,
         displayText: e.displayText,
-        status: e.status
+        status: e.status,
+        min_age: (e as any).min_age // <--- הנה התוספת שפותחת את החסימה!
       }));
 
     Logger.info('Returning public view of events', { 
