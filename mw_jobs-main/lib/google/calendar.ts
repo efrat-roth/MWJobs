@@ -11,39 +11,29 @@ export interface DateRangeCalendarInput {
 }
 
 /**
- * Creates separate calendar events for each day in the date range
- * Returns array of calendar event IDs
+ * Creates a single continuous calendar event from start date/time to end date/time
+ * Returns array containing the calendar event ID
  */
 export async function createCalendarEventsForDateRange(input: DateRangeCalendarInput): Promise<string[]> {
   const { calendar } = await getAuthorizedApis();
   const eventIds: string[] = [];
   
-  // Generate all dates in the range
-  const startDate = new Date(input.startDate);
-  const endDate = new Date(input.endDate);
-  const currentDate = new Date(startDate);
+  // חיבור ישיר של תאריך ההתחלה לשעת ההתחלה, ותאריך הסיום לשעת הסיום
+  const startIso = `${input.startDate}T${input.startTime}:00`;
+  const endIso = `${input.endDate}T${input.endTime}:00`;
   
-  while (currentDate <= endDate) {
-    const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    const startIso = `${dateStr}T${input.startTime}:00`;
-    const endIso = `${dateStr}T${input.endTime}:00`;
-    
-    // Create event for this specific day
-    const res = await calendar.events.insert({
-      calendarId: 'primary',
-      requestBody: {
-        summary: input.summary,
-        description: input.description,
-        start: { dateTime: startIso, timeZone: input.timezone || 'UTC' },
-        end: { dateTime: endIso, timeZone: input.timezone || 'UTC' }
-      }
-    });
-    
-    eventIds.push(res.data.id!);
-    
-    // Move to next day
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
+  // יצירת אירוע יחיד ורציף ביומן גוגל
+  const res = await calendar.events.insert({
+    calendarId: 'primary',
+    requestBody: {
+      summary: input.summary,
+      description: input.description,
+      start: { dateTime: startIso, timeZone: input.timezone || 'Asia/Jerusalem' },
+      end: { dateTime: endIso, timeZone: input.timezone || 'Asia/Jerusalem' }
+    }
+  });
+  
+  eventIds.push(res.data.id!);
   
   return eventIds;
 }
