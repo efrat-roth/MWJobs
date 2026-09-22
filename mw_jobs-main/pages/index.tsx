@@ -17,6 +17,8 @@ interface EventItem {
   isFull: boolean;
   label: string;
   displayText: string;
+  min_age?: number;
+  client_name?: string; // נוסף מאחורי הקלעים
 }
 
 interface FormHistory {
@@ -41,6 +43,10 @@ export default function Landing() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  
+  // חלונית הרשמה מיוחדת
+  const [showSpecialPopup, setShowSpecialPopup] = useState(false);
+  
   const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
   const [formHistory, setFormHistory] = useState<FormHistory>({ fullName: [], idNumber: [], phone: [], city: [] });
   const [suggestions, setSuggestions] = useState<SuggestionState>({ field: null, suggestions: [], show: false });
@@ -58,7 +64,6 @@ export default function Landing() {
         setShowDropdown(false);
       }
       
-      // Hide suggestions when clicking outside
       const clickedInsideSuggestion = Object.values(suggestionRefs.current).some(ref => 
         ref && ref.contains(event.target as Node)
       );
@@ -71,97 +76,62 @@ export default function Landing() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Load form history from localStorage
   function loadFormHistory() {
     try {
       const savedHistory = localStorage.getItem('mw-jobs-form-history');
       if (savedHistory) {
         const parsedHistory = JSON.parse(savedHistory);
         setFormHistory(parsedHistory);
-        // Debug: Log the loaded history
-        console.log('Loaded form history:', parsedHistory);
       }
     } catch (error) {
       console.error('Error loading form history:', error);
     }
   }
 
-  // Save form history to localStorage
   function saveFormHistory(newHistory: FormHistory) {
     try {
       localStorage.setItem('mw-jobs-form-history', JSON.stringify(newHistory));
       setFormHistory(newHistory);
-      // Debug: Log the saved history
-      console.log('Saved form history:', newHistory);
     } catch (error) {
       console.error('Error saving form history:', error);
     }
   }
 
-  // Add multiple values to form history at once
   function addToHistoryBatch(updates: { field: keyof FormHistory; value: string }[]) {
     const currentHistory = { ...formHistory };
     
     updates.forEach(({ field, value }) => {
       if (!value.trim()) return;
-      
       const fieldHistory = currentHistory[field] || [];
-      // Remove if already exists and add to beginning
       const filteredHistory = fieldHistory.filter(item => item !== value.trim());
-      const newFieldHistory = [value.trim(), ...filteredHistory].slice(0, 5); // Keep only last 5 entries
-      
+      const newFieldHistory = [value.trim(), ...filteredHistory].slice(0, 5);
       currentHistory[field] = newFieldHistory;
     });
     
     saveFormHistory(currentHistory);
   }
 
-  // Add value to form history
-  function addToHistory(field: keyof FormHistory, value: string) {
-    if (!value.trim()) return;
-    
-    const currentHistory = { ...formHistory };
-    const fieldHistory = currentHistory[field] || [];
-    
-    // Remove if already exists and add to beginning
-    const filteredHistory = fieldHistory.filter(item => item !== value);
-    const newFieldHistory = [value, ...filteredHistory].slice(0, 5); // Keep only last 5 entries
-    
-    currentHistory[field] = newFieldHistory;
-    saveFormHistory(currentHistory);
-  }
-
-  // Show suggestions for a field
   function showSuggestions(field: keyof FormHistory, currentValue: string = '') {
     const fieldHistory = formHistory[field] || [];
     let filtered = fieldHistory;
     
-    // Filter based on current input
     if (currentValue.trim()) {
       filtered = fieldHistory.filter(item => 
         item.toLowerCase().includes(currentValue.toLowerCase())
       );
     }
     
-    // Show suggestions if there are any, even on mobile
     if (filtered.length > 0) {
-      setSuggestions({
-        field,
-        suggestions: filtered,
-        show: true
-      });
+      setSuggestions({ field, suggestions: filtered, show: true });
     } else {
       setSuggestions({ field: null, suggestions: [], show: false });
     }
   }
 
-  // Enhanced function to handle both focus and input events
   function handleFieldFocus(field: keyof FormHistory, currentValue: string = '') {
-    // Always try to show suggestions on focus
     showSuggestions(field, currentValue);
   }
 
-  // Handle suggestion selection
   function selectSuggestion(value: string) {
     if (suggestions.field) {
       setForm(f => ({ ...f, [suggestions.field!]: value }));
@@ -181,7 +151,6 @@ export default function Landing() {
         : [...prev, eventId]
     );
     
-    // Clear event selection error when user selects an event
     if (fieldErrors.eventIds) {
       setFieldErrors(prev => ({ ...prev, eventIds: '' }));
     }
@@ -189,14 +158,12 @@ export default function Landing() {
 
   function handleDropdownToggle() {
     if (!showDropdown && dropdownRef.current) {
-      // Calculate if dropdown should open up or down
       const rect = dropdownRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
-      const dropdownHeight = 300; // max-height of dropdown
+      const dropdownHeight = 300;
       
-      // If not enough space below and more space above, open upward
       if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
         setDropdownDirection('up');
       } else {
@@ -213,12 +180,10 @@ export default function Landing() {
 
   function update(k:string,v:string){ 
     setForm(f=>({...f,[k]:v})); 
-    // Clear field error when user starts typing
     if (fieldErrors[k]) {
       setFieldErrors(prev => ({ ...prev, [k]: '' }));
     }
     
-    // Show suggestions as user types
     if (['fullName', 'idNumber', 'phone', 'city'].includes(k)) {
       showSuggestions(k as keyof FormHistory, v);
     }
@@ -239,7 +204,6 @@ export default function Landing() {
     try {
       await axios.post('/api/signup',{ eventIds: selectedEvents, ...form });
       
-      // Save form data to history on successful submission - batch update
       addToHistoryBatch([
         { field: 'fullName', value: form.fullName.trim() },
         { field: 'idNumber', value: form.idNumber.trim() },
@@ -247,25 +211,33 @@ export default function Landing() {
         { field: 'city', value: form.city.trim() }
       ]);
       
+      setMessage(response.data.message);
       setIsSuccess(true);
+      
+      // בדיקה אם אחד מהאירועים שנבחרו קשור לאפללו
+      const isAflaloEvent = selectedEvents.some(id => {
+        const event = events.find(e => e.id === id);
+        return event?.client_name?.includes('אפללו') || event?.name?.includes('אפללו');
+      });
+
+      if (isAflaloEvent) {
+        setShowSpecialPopup(true);
+      }
+
       setForm({ fullName:'', idNumber:'', phone:'', city:'', dateOfBirth:''});
       setSelectedEvents([]);
       setSuggestions({ field: null, suggestions: [], show: false });
       await fetchEvents();
       
-      // Reset success state after 3 seconds
       setTimeout(() => {
         setIsSuccess(false);
       }, 3000);
     } catch(err:any){
       const errorData = err.response?.data;
-      
       if (errorData?.errors && Array.isArray(errorData.errors)) {
-        // Parse field-specific validation errors
         const newFieldErrors: Record<string, string> = {};
         
         errorData.errors.forEach((error: string) => {
-          // Extract field name and message from Hebrew error format
           const fieldMappings = [
             { prefix: 'בחירת אירועים:', field: 'eventIds' },
             { prefix: 'שם מלא:', field: 'fullName' },
@@ -284,33 +256,22 @@ export default function Landing() {
             }
           }
           
-          // Fallback: if no prefix found, try to detect field from error content
           if (!fieldFound) {
-            if (error.includes('זהות') || error.includes('ת.ז')) {
-              newFieldErrors.idNumber = error;
-            } else if (error.includes('טלפון')) {
-              newFieldErrors.phone = error;
-            } else if (error.includes('שם')) {
-              newFieldErrors.fullName = error;
-            } else if (error.includes('עיר')) {
-              newFieldErrors.city = error;
-            } else if (error.includes('לידה') || error.includes('גיל') || error.includes('18')) {
-              newFieldErrors.dateOfBirth = error;
-            } else if (error.includes('אירוע')) {
-              newFieldErrors.eventIds = error;
-            }
+            if (error.includes('זהות') || error.includes('ת.ז')) newFieldErrors.idNumber = error;
+            else if (error.includes('טלפון')) newFieldErrors.phone = error;
+            else if (error.includes('שם')) newFieldErrors.fullName = error;
+            else if (error.includes('עיר')) newFieldErrors.city = error;
+            else if (error.includes('לידה') || error.includes('גיל') || error.includes('18')) newFieldErrors.dateOfBirth = error;
+            else if (error.includes('אירוע')) newFieldErrors.eventIds = error;
           }
         });
         
         setFieldErrors(newFieldErrors);
-        
-        // Also show a general message if there are field errors
         if (Object.keys(newFieldErrors).length > 0) {
           setMessage('יש לתקן את השגיאות בטופס');
         }
       } else {
-        // Fallback to generic error message
-        setMessage(errorData?.error || 'שגיאה בשליחת הטופס');
+        setMessage(errorData?.message || errorData?.error || 'שגיאה בשליחת הטופס');
       }
     } finally {
       setLoading(false);
@@ -322,14 +283,50 @@ export default function Landing() {
       <Head>
         <title>MW Jobs - הרשמה לאירועי עבודה</title>
         <meta name="description" content="מערכת הרשמה לאירועי עבודה במגזר הפרטי תחת קבוצת MW פתרונות כח אדם. הרשמו לאירועי עבודה במספר קליקים." />
-        <meta name="keywords" content="עבודה, אירועים, הרשמה, MW, כח אדם, משרות זמניות" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta property="og:title" content="MW Jobs - הרשמה לאירועי עבודה" />
-        <meta property="og:description" content="מערכת הרשמה לאירועי עבודה במגזר הפרטי תחת קבוצת MW פתרונות כח אדם" />
-        <meta property="og:type" content="website" />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://mw-jobs.vercel.app" />
       </Head>
+
+      {/* --- חלונית קופצת (Popup) לאפללו --- */}
+      {showSpecialPopup && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '16px', padding: '30px', 
+            maxWidth: '400px', width: '100%', textAlign: 'center',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)', direction: 'rtl'
+          }}>
+            <h2 style={{ color: '#007AFF', marginBottom: '15px', fontSize: '24px' }}>הרשמתך התקבלה!</h2>
+            <p style={{ color: '#333', fontSize: '16px', marginBottom: '25px', lineHeight: '1.5' }}>
+              להשלמת הרישום לאירוע זה, אנא כנסו לקישור הבא ומלאו את הפרטים הנדרשים.
+            </p>
+            <a 
+              href="https://wa.me/972538270508" /* החליפי את זה בקישור שאת רוצה! */
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={() => setShowSpecialPopup(false)}
+              style={{
+                display: 'block', background: '#007AFF', color: 'white', 
+                textDecoration: 'none', padding: '12px 20px', borderRadius: '50px',
+                fontWeight: 'bold', marginBottom: '15px'
+              }}
+            >
+              למעבר לטופס ההשלמה
+            </a>
+            <button 
+              onClick={() => setShowSpecialPopup(false)}
+              style={{
+                background: 'transparent', border: 'none', color: '#666',
+                cursor: 'pointer', textDecoration: 'underline', fontSize: '14px'
+              }}
+            >
+              סגור חלונית
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={`landing-container ${loading ? 'loading' : ''}`}>
       <header className="header">
@@ -562,6 +559,22 @@ export default function Landing() {
                 {loading ? 'שולח...' : isSuccess ? 'נרשמת בהצלחה' : 'שליחה'}
                 <img src="/submit-icon.svg" alt="Send" className="submit-icon" />
               </button>
+             {message && (
+                <div style={{ 
+                  color: isSuccess ? '#155724' : '#721c24', 
+                  backgroundColor: isSuccess ? '#d4edda' : '#f8d7da',
+                  border: `1px solid ${isSuccess ? '#c3e6cb' : '#f5c6cb'}`,
+                  padding: '12px',
+                  borderRadius: '6px',
+                  marginTop: '15px', 
+                  textAlign: 'center', 
+                  fontWeight: 'bold',
+                  fontSize: '1em',
+                  whiteSpace: 'pre-line'
+                }}>
+                  {message}
+                </div>
+              )}
             </div>
           </form>
         </div>

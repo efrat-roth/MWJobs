@@ -10,6 +10,7 @@ import { type AddEventRequest, type ApiResponse } from '../../../lib/types';
 import { createSpreadsheetInFolder, shareFileWithClient } from '../../../lib/google/drive';
 import { getAuthorizedApis } from '../../../lib/google/backendClient';
 import { createCalendarEventsForDateRange } from '../../../lib/google/calendar';
+
 export default createApiHandler(async (req, res) => {
   const validation = validateSchema<AddEventRequest>(addEventSchema, 'Invalid event data');
   const parsed = validation(req);
@@ -84,7 +85,9 @@ export default createApiHandler(async (req, res) => {
     worker_limit: parsed.workerLimit,
     hourlyRate: parsed.hourlyRate,
     sheet_file_id: sheetFileId,
-    calendar_event_ids: calendarEventIds
+    calendar_event_ids: calendarEventIds,
+    min_age: (parsed as any).minAge,
+    client_name: (parsed as any).clientName // <--- הנה השורה שהוספנו! מעבירה את שם הלקוח למסד הנתונים
   });
   
   events.push(meta);

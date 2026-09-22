@@ -5,7 +5,7 @@ import { Logger, AppError } from '../util/logger';
 import { env } from '../config/environment';
 
 const META_HEADERS = [
-  'id','name','startDate','endDate','startTime','endTime','startDatetime','endDatetime','worker_limit','hourlyRate','sheet_file_id','calendar_event_ids','status','signups_count','created_at'
+  'id','name','startDate','endDate','startTime','endTime','startDatetime','endDatetime','worker_limit','hourlyRate','min_age','sheet_file_id','calendar_event_ids','status','signups_count','created_at','client_name'
 ];
 
 export async function loadAllEvents(): Promise<EventMeta[]> {
@@ -41,6 +41,8 @@ export async function loadAllEvents(): Promise<EventMeta[]> {
           endDatetime: r.endDatetime,
           worker_limit: Number(r.worker_limit),
           hourlyRate: Number(r.hourlyRate || '40'),
+          min_age: r.min_age ? Number(r.min_age) : undefined,
+          client_name: r.client_name || undefined, // משיכת שם הלקוח (אם קיים)
           sheet_file_id: r.sheet_file_id,
           calendar_event_ids: r.calendar_event_ids ? JSON.parse(r.calendar_event_ids) : [],
           status: r.status as any,
@@ -91,7 +93,6 @@ export async function saveAllEvents(events: EventMeta[]) {
     Logger.debug('Saving all events to metadata sheet', { eventCount: events.length });
     
     const sheetConfig = env.getSheetConfig();
-    // Serialize calendar_event_ids array for storage
     const serializedEvents = events.map(e => ({
       ...e,
       calendar_event_ids: JSON.stringify(e.calendar_event_ids)
@@ -132,8 +133,10 @@ export function createEventMeta(params: {
   hourlyRate: number;
   sheet_file_id: string; 
   calendar_event_ids: string[];
+  min_age?: number;
+  client_name?: string; // הוספת לקוח כרשות
 }): EventMeta {
-  const { name, startDate, endDate, startTime, endTime, worker_limit, hourlyRate, sheet_file_id, calendar_event_ids } = params;
+  const { name, startDate, endDate, startTime, endTime, worker_limit, hourlyRate, sheet_file_id, calendar_event_ids, min_age, client_name } = params;
   const startDatetime = `${startDate}T${startTime}:00`;
   const endDatetime = `${endDate}T${endTime}:00`;
   
@@ -148,6 +151,8 @@ export function createEventMeta(params: {
     endDatetime,
     worker_limit,
     hourlyRate,
+    min_age,
+    client_name, // נשמר ב-DB אבל לא מוצג לעובד
     sheet_file_id,
     calendar_event_ids,
     status: 'open',
