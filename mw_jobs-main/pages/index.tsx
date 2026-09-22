@@ -18,7 +18,7 @@ interface EventItem {
   label: string;
   displayText: string;
   min_age?: number;
-  client_name?: string; // נוסף מאחורי הקלעים
+  client_name?: string;
 }
 
 interface FormHistory {
@@ -44,7 +44,6 @@ export default function Landing() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   
-  // חלונית הרשמה מיוחדת
   const [showSpecialPopup, setShowSpecialPopup] = useState(false);
   
   const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
@@ -199,6 +198,15 @@ export default function Landing() {
       setFieldErrors({ eventIds: 'יש לבחור לפחות אירוע אחד' });
       return; 
     }
+
+    // בדיקה מקדימה: האם זה אירוע של אפללו? (כולל אנגלית ועברית)
+    const isAflaloEvent = selectedEvents.some(id => {
+      const event = events.find(e => e.id === id);
+      const cName = event?.client_name?.toLowerCase() || '';
+      const eName = event?.name?.toLowerCase() || '';
+      return cName.includes('אפללו') || cName.includes('aflalo') || 
+             eName.includes('אפללו') || eName.includes('aflalo');
+    });
     
     setLoading(true);
     try {
@@ -214,12 +222,7 @@ export default function Landing() {
       setMessage(response.data.message);
       setIsSuccess(true);
       
-      // בדיקה אם אחד מהאירועים שנבחרו קשור לאפללו
-      const isAflaloEvent = selectedEvents.some(id => {
-        const event = events.find(e => e.id === id);
-        return event?.client_name?.includes('אפללו') || event?.name?.includes('אפללו');
-      });
-
+      // הקפצה במקרה של הצלחה חלקה
       if (isAflaloEvent) {
         setShowSpecialPopup(true);
       }
@@ -231,7 +234,9 @@ export default function Landing() {
       
       setTimeout(() => {
         setIsSuccess(false);
-      }, 3000);
+        setMessage('');
+      }, 6000);
+
     } catch(err:any){
       const errorData = err.response?.data;
       if (errorData?.errors && Array.isArray(errorData.errors)) {
@@ -271,7 +276,16 @@ export default function Landing() {
           setMessage('יש לתקן את השגיאות בטופס');
         }
       } else {
-        setMessage(errorData?.message || errorData?.error || 'שגיאה בשליחת הטופס');
+        const errorMessage = errorData?.message || errorData?.error || 'שגיאה בשליחת הטופס';
+        setMessage(errorMessage);
+
+        // 💥 התיקון הקריטי: אם השרת החזיר שגיאה אבל הטקסט מעיד על הצלחה - נקפיץ את החלונית!
+        if (isAflaloEvent && (errorMessage.includes('Success') || errorMessage.includes('צלחה') || errorMessage.includes('registered'))) {
+          setShowSpecialPopup(true);
+          setForm({ fullName:'', idNumber:'', phone:'', city:'', dateOfBirth:''});
+          setSelectedEvents([]);
+          fetchEvents().catch(console.error); // רענון שקט של האירועים
+        }
       }
     } finally {
       setLoading(false);
@@ -303,7 +317,7 @@ export default function Landing() {
               להשלמת הרישום לאירוע זה, אנא כנסו לקישור הבא ומלאו את הפרטים הנדרשים.
             </p>
             <a 
-              href="https://wa.me/972538270508" /* החליפי את זה בקישור שאת רוצה! */
+              href="https://wa.me/972538270508" 
               target="_blank" 
               rel="noopener noreferrer"
               onClick={() => setShowSpecialPopup(false)}
@@ -376,6 +390,7 @@ export default function Landing() {
                             <div className="event-display-container">
                               <div className="event-name">
                                 {event.name}
+                                {event.min_age ? <span style={{color: '#e74c3c', fontSize: '0.85em', marginRight: '6px', fontWeight: 'bold'}}>(מגיל {event.min_age}+)</span> : null}
                                 {event.status === 'frozen' ? 
                                   <span className="event-unavailable-indicator"> (לא זמין)</span> :
                                   event.isFull && <span className="event-full-indicator"> (מלא)</span>
