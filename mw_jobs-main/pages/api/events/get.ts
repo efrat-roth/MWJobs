@@ -26,7 +26,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       isAdmin 
     });
 
-    const now = new Date();
     const future = events
       .filter(e => {
         // Use endDate for filtering - event is available until end date passes
@@ -78,7 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         isFull: e.signups_count >= e.worker_limit || e.status === 'frozen',
         label: e.label,
         displayText: e.displayText,
-        status: e.status
+        status: e.status,
+        min_age: e.min_age,           // <--- הוספנו את המגבלת גיל
+        client_name: e.client_name    // <--- הוספנו את שם הלקוח כדי שהפופאפ יוכל לבדוק אותו!
       }));
 
     Logger.info('Returning public view of events', { 
@@ -135,9 +136,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       requestId 
     });
   }
-}
-
-function formatDateDisplay(dateStr: string) {
-  const [y,m,d]=dateStr.split('-');
-  return `${d}/${m}`;
 }
