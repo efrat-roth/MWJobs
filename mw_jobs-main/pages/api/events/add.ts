@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { addEventSchema } from '../../../lib/events/validation';
 import { createEventMeta, loadAllEvents, saveAllEvents } from '../../../lib/events/repository';
-import { overwriteAll } from '../../../lib/google/sheets';
+import { overwriteAll, readAll } from '../../../lib/google/sheets';
 import { createApiHandler, validateSchema } from '../../../lib/utils/api';
 import { env } from '../../../lib/config/environment';
 import { createEventSheetName } from '../../../lib/utils/common';
@@ -23,6 +23,26 @@ export default createApiHandler(async (req, res) => {
     endDate: parsed.endDate
   });
 
+  let resolvedClientName = (parsed as any).clientName;
+
+  // אם נבחר לקוח קיים (יש אימייל אבל אין שם חדש), נחפש את השם שלו מגיליון הלקוחות
+  if (!resolvedClientName && parsed.clientEmail) {
+    try {
+      const clientsSheetId = process.env.CLIENTS_SHEET_ID;
+      if (clientsSheetId) {
+        const { rows } = await readAll(clientsSheetId);
+        // מחפשים את הלקוח לפי האימייל
+        const matchedClient = rows.find((r: any) => r.email === parsed.clientEmail || r.Email === parsed.clientEmail || Object.values(r).includes(parsed.clientEmail));
+        if (matchedClient) {
+          resolvedClientName = matchedClient.name || matchedClient.Name || matchedClient.clientName;
+        }
+      }
+    } catch (err) {
+      Logger.warn('Could not resolve client name from email', { error: err });
+    }
+  }
+
+  // אם זה לקוח חדש לחלוטין, נוסיף אותו לטבלת הלקוחות
   if ((parsed as any).clientName && parsed.clientEmail) {
     try {
       const { sheets } = await getAuthorizedApis();
@@ -87,7 +107,7 @@ export default createApiHandler(async (req, res) => {
     sheet_file_id: sheetFileId,
     calendar_event_ids: calendarEventIds,
     min_age: (parsed as any).minAge,
-    client_name: (parsed as any).clientName // <--- הנה השורה שהוספנו! מעבירה את שם הלקוח למסד הנתונים
+    client_name: resolvedClientName // <--- מעביר את שם הלקוח (בין אם חדש ובין אם נמצא לפי האימייל)
   });
   
   events.push(meta);
