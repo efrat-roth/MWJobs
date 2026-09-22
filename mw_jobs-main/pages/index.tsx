@@ -202,7 +202,7 @@ export default function Landing() {
     
     setLoading(true);
     try {
-      await axios.post('/api/signup',{ eventIds: selectedEvents, ...form });
+      const response = await axios.post('/api/signup',{ eventIds: selectedEvents, ...form });
       
       addToHistoryBatch([
         { field: 'fullName', value: form.fullName.trim() },
