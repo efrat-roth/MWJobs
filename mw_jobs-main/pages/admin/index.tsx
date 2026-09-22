@@ -167,8 +167,17 @@
       setLoading(true); setError(''); setMessage('');
       
       // הגדרת המייל והשם שישלחו לשרת
+      // הגדרת המייל והשם שישלחו לשרת (תומך גם בלקוח קיים וגם בחדש)
       const clientEmailToSend = selectedClientMode === 'new' ? newClientEmail : (selectedClientMode === 'existing' ? existingClientEmail : undefined);
-      const clientNameToSend = selectedClientMode === 'new' ? newClientName : undefined;
+
+      let clientNameToSend = undefined;
+      if (selectedClientMode === 'new') {
+        clientNameToSend = newClientName;
+      } else if (selectedClientMode === 'existing') {
+  // מוצאים את שם הלקוח מתוך רשימת הלקוחות לפי המייל שנבחר
+        const foundClient = clients.find(c => c.email === existingClientEmail);
+        clientNameToSend = foundClient ? foundClient.name : undefined;
+      }
 
       try {
         await axios.post('/api/events/add', {
