@@ -95,6 +95,7 @@ export default createApiHandler(async (req, res) => {
   });
 
   // Save metadata
+ // Save metadata
   const events = await loadAllEvents();
   const meta = createEventMeta({
     name: parsed.name,

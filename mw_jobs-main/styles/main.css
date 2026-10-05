@@ -16,11 +16,16 @@ body {
   direction: rtl;
 }
 
+html {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Main Landing Page Styles */
 .landing-container {
   position: relative;
   width: 100vw;
   min-height: 100vh;
+  min-height: 100dvh;
   background: url('/background-desktop.jpg') center/cover no-repeat fixed;
   overflow-x: hidden;
   padding: 0 25px;
@@ -537,7 +542,7 @@ body {
   }
 
   .main-content {
-    padding: 100px 16px 40px;
+    padding: 100px 16px 150px;
   }
 
   .form-container {

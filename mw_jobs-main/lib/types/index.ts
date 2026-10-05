@@ -25,6 +25,7 @@ export interface EventMeta {
   endDatetime: string;    // ISO combined (UTC or local chosen)
   worker_limit: number;
   hourlyRate: number;
+  min_age?: number;
   sheet_file_id: string;
   calendar_event_ids: string[];        // Multiple event IDs for date range events
   status: EventStatus;

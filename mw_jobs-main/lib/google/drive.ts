@@ -42,7 +42,7 @@ export async function shareFileWithClient(fileId: string, email: string) {
     await drive.permissions.create({
       fileId: fileId,
       requestBody: {
-        role: 'writer', // הרשאת עריכה ללקוח
+        role: 'reader', // הרשאת עריכה ללקוח
         type: 'user',
         emailAddress: email,
       },

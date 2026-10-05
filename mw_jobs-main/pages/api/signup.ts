@@ -19,6 +19,16 @@ export default createApiHandler(async (req, res) => {
     eventCount: parsed.eventIds.length
   });
 
+  // חישוב הגיל המדויק של העובד פעם אחת מראש
+  const birthDate = new Date(parsed.dateOfBirth);
+  const today = new Date();
+  let exactAge = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  const dayDiff = today.getDate() - birthDate.getDate();
+  if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+    exactAge--;
+  }
+
   const events = await loadAllEvents();
   const signupResults = [];
   const errors = [];
@@ -48,6 +58,15 @@ export default createApiHandler(async (req, res) => {
       if (event.signups_count >= event.worker_limit) {
         errors.push(`Event "${event.name}" has reached its capacity`);
         continue;
+      }
+
+      // === סעיף 2: בדיקת גיל מינימלי דינמי לאירוע ===
+      if ((event as any).min_age) {
+        const minAgeLimit = Number((event as any).min_age);
+        if (!isNaN(minAgeLimit) && exactAge < minAgeLimit) {
+          errors.push(`ההרשמה לאירוע "${event.name}" מוגבלת מגיל ${minAgeLimit} ומעלה (גילך הנוכחי: ${exactAge})`);
+          continue;
+        }
       }
 
       // Update event sheet
@@ -165,23 +184,23 @@ export default createApiHandler(async (req, res) => {
     // All failed
     const errorResponse: ApiResponse = {
       error: 'Registration failed',
-      message: `Failed to register for any events: ${errors.join('; ')}`,
+      message: `ההרשמה נכשלה: ${errors.join('; ')}`,
       requestId: req.requestId
     };
     return res.status(HTTP_STATUS.BAD_REQUEST).json(errorResponse);
   } else if (errors.length === 0) {
-    // All succeeded
+    // === סעיף 3: עדכון הודעת הצלחה מלאה ===
     const successResponse: ApiResponse = {
       ok: true,
-      message: `Successfully registered for ${signupResults.length} event(s)`,
+      message: `נרשמת בהצלחה ל-${signupResults.length} אירועים! בבקשה להמתין להודעת אישור מהמשרד.`,
       data: { results: signupResults }
     };
     res.json(successResponse);
   } else {
-    // Partial success
+    // === סעיף 3: עדכון הודעת הצלחה חלקית (למשל אם חלק מהאירועים נחסמו בגלל גיל) ===
     const partialResponse: ApiResponse = {
       ok: true,
-      message: `Registered for ${signupResults.length} of ${parsed.eventIds.length} events`,
+      message: `נרשמת בהצלחה ל-${signupResults.length} מתוך ${parsed.eventIds.length} אירועים. בבקשה להמתין להודעת אישור מהמשרד. שימו לב לשגיאות הבאות: ${errors.join(', ')}`,
       data: { 
         results: signupResults,
         errors: errors 

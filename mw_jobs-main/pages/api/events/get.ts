@@ -62,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // For public: show open, full, and frozen events (but not archived/deleted)
+    // For public: show open, full, and frozen events (but not archived/deleted)
     const publicEvents = future
       .filter(e=> e.status === 'open' || e.status === 'full' || e.status === 'frozen')
       .map(e=>({
