@@ -31,7 +31,6 @@ export interface EventMeta {
   status: EventStatus;
   signups_count: number;
   created_at: string;
-  min_age?: number;       // <--- להוסיף את השורה הזו
   client_name?: string;
   
 }
