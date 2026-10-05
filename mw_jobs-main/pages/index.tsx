@@ -317,7 +317,7 @@ export default function Landing() {
               להשלמת הרישום לאירוע זה, אנא כנסו לקישור הבא ומלאו את הפרטים הנדרשים.
             </p>
             <a 
-              href="https://wa.me/972538270508" 
+              href="https://apollo-security.co.il" 
               target="_blank" 
               rel="noopener noreferrer"
               onClick={() => setShowSpecialPopup(false)}
